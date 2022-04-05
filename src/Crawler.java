@@ -69,15 +69,15 @@ public class Crawler {
 
     public static void main(String[] args) {
         Scanner in = new Scanner(System.in);
-        System.out.print("Input a url: ");
+        System.out.print("URL: ");
         String url = in.next();
-        System.out.print("Input a deep of search: ");
-        String deep = in.next();
+        System.out.print("Input a depth of search: ");
+        String depth = in.next();
         try {
-            Process(url, Integer.parseInt(deep));
+            Process(url, Integer.parseInt(depth));
         }
         catch (NumberFormatException | IOException e) {
-            System.out.println("usage: java Crawler " + url + " " + deep);
+            System.out.println("usage: java Crawler " + url + " " + depth);
         }
     }
 }
