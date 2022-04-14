@@ -6,7 +6,8 @@ import java.net.URL;
 public class URLDepthPair {
     public static final String URL_PREFIX =  "http://";
     public String URL;
-    public int depth;
+    private int depth;
+    URL host_path;
 
     public static boolean isUrlValid(String url) {
         if (url == null)
@@ -15,22 +16,27 @@ public class URLDepthPair {
         return urlValidationPattern.matcher(url).find();
     }
 
+    //принимает на вход пару для хранения
     public URLDepthPair (String URL, int depth) throws MalformedURLException {
         if (!isUrlValid(URL)) {
             throw new MalformedURLException();
         }
-        this.URL = URL;
-        this.depth = depth;
+        this.URL=URL;
+        this.depth=depth;
+        try {
+            this.host_path= new URL(URL);
+        }
+        catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public String getHost() throws MalformedURLException {
-        URL host = new URL(URL);
-        return host.getHost();
+    public String getHost() {
+        return host_path.getHost();
     }
 
-    public String getPath() throws MalformedURLException {
-        URL path = new URL(URL);
-        return path.getPath();
+    public String getPath() {
+        return host_path.getPath();
     }
 
     public int getDepth() {
@@ -45,7 +51,7 @@ public class URLDepthPair {
         boolean isAlready = true;
         for (URLDepthPair c : resultLink) {
             if (c.getURL().equals(pair.getURL())) {
-                isAlready = false;
+                isAlready=false;
             }
         }
         return isAlready;

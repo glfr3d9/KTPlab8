@@ -1,83 +1,57 @@
-import java.io.*;
-import java.net.*;
+import java.net.MalformedURLException;
 import java.util.LinkedList;
-import java.util.Scanner;
 
 public class Crawler {
-    static LinkedList <URLDepthPair> findLink = new LinkedList <URLDepthPair>();
-    static LinkedList <URLDepthPair> viewedLink = new LinkedList <URLDepthPair>();
-
-    public static void showResult(LinkedList<URLDepthPair> viewedLink)
-    {
-        for (URLDepthPair c : viewedLink) {
+    public static void showResult(LinkedList<URLDepthPair> resultLink) {
+        for (URLDepthPair c : resultLink) {
             System.out.println(c.getDepth() + "\t" + c.getURL());
         }
     }
 
-    public static void request(PrintWriter out,URLDepthPair pair) throws MalformedURLException {
-        out.println("GET " + pair.getPath() + " HTTP/1.1");
-        out.println("Host: " + pair.getHost());
-        out.println("Connection: close");
-        out.println();
-        out.flush();
+    //являеется ли введённый символ числом
+    public static boolean checkDigit(String line) {
+        boolean isDigit = true;
+        for (int i = 0; i < line.length() && isDigit; i++) {
+            isDigit = Character.isDigit(line.charAt(i));
+        }
+        return isDigit;
     }
 
-    public static void Process(String pair, int maxDepth) throws IOException {
-        findLink.add(new URLDepthPair(pair, 0));
-        while (!findLink.isEmpty()) {
-            URLDepthPair currentPair = findLink.removeFirst();
-            if (currentPair.depth < maxDepth)  {
-                Socket my_socket = new Socket(currentPair.getHost(), 80);
-                my_socket.setSoTimeout(1000);
+    public static void main(String[] args) throws MalformedURLException {
+        //вод ссылки и проверка данных
+        args = new String[]{"http://bogoslovie.pro/", "4", "100"};
+        if (args.length == 3 && checkDigit(args[1]) && checkDigit(args[2])) {
+            String lineUrl = args[0];
+            int numThreads = Integer.parseInt(args[2]);
+            //инициализация пула адресов
+            URLPool pool = new URLPool(Integer.parseInt(args[1]));
+            pool.addPair(new URLDepthPair(lineUrl, 0));
+            //запуск потоков
+            for (int i = 0; i < numThreads; i++) {
+                //передача пула адресов в каждый созданный поток
+                CrawlerTask c = new CrawlerTask(pool);
+                Thread t = new Thread(c);
+                t.start();
+            }
+            //ожидание завершения работы всех потоков
+            while (pool.getWait() != numThreads) {
                 try {
-                    BufferedReader in = new BufferedReader(new InputStreamReader(my_socket.getInputStream()));
-                    PrintWriter out = new PrintWriter(my_socket.getOutputStream(), true);
-                    request(out, currentPair);
-                    String line;
-
-                    while ((line = in.readLine()) != null) {
-                        if (line.indexOf(currentPair.URL_PREFIX) != -1 && line.indexOf('"') != -1) {
-                            StringBuilder currentLink = new StringBuilder();
-                            int i = line.indexOf(currentPair.URL_PREFIX);
-                            while (line.charAt(i) != '"' && line.charAt(i) != ' ') {
-                                if (line.charAt(i) == '<') {
-                                    currentLink.deleteCharAt(currentLink.length() - 1);
-                                    break;
-                                }
-                                else {
-                                    currentLink.append(line.charAt(i));
-                                    i++;
-                                }
-                            }
-                            URLDepthPair newPair = new URLDepthPair(currentLink.toString(), currentPair.depth + 1);
-                            if (currentPair.check(findLink, newPair) && currentPair.check(viewedLink, newPair) && !currentPair.URL.equals(newPair.URL)) {
-                                findLink.add(newPair);
-                            }
-                        }
-                    }
-                    my_socket.close();
+                    Thread.sleep(500);
                 }
-                catch (SocketTimeoutException e) {
-                    my_socket.close();
+                catch (InterruptedException e) {
+                    System.out.println("Ignoring InterruptedException");
                 }
             }
-            viewedLink.add(currentPair);
+            try {
+                showResult(pool.getResult());;
+            }
+            catch (NullPointerException e) {
+                System.out.println("Not a link");
+            }
+            System.exit(0);
         }
-        showResult(viewedLink);
-    }
-
-
-    public static void main(String[] args) {
-        Scanner in = new Scanner(System.in);
-        System.out.print("URL: ");
-        String url = in.next();
-        System.out.print("Input a depth of search: ");
-        String depth = in.next();
-        try {
-            Process(url, Integer.parseInt(depth));
-        }
-        catch (NumberFormatException | IOException e) {
-            System.out.println("usage: java Crawler " + url + " " + depth);
+        else {
+            System.out.println("usage: java Crawler <URL> <maximum_depth> <num_threads> or second/third not digit");
         }
     }
 }
